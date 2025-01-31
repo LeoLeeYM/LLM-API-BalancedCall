@@ -2,6 +2,30 @@
 基于 Python Flask 的 LLM 模型 API 统一接口均衡调用系统，可快速添加任何 LLM 模型的 API 并设置对应的负载，系统会自动均衡负载，以实现免费 LLM API 的高效应用。
 通过本项目你可以快速完成 LLM 模型 API 的聚合接口，并且模块化的设计允许您快速的添加任意模型 API 并设置其负载和权重。
 
+项目结构
+
+```
+├── app/
+│   ├── __init__.py
+│   ├── llm/
+│   │   ├── __init__.py
+│   │   └── routes.py             // 内建 API 接口
+│   └── utils/
+│       ├── __init__.py
+│       ├── llm_manager.py        // 模型调用类
+│       ├── load_balancer.py      // 模型负载计算
+|       ├── load_strategies.py    // 模型负载计算类型
+│       └── models/
+│           ├── __init__.py
+│           ├── base_model.py     // 模型基础类
+│           ├── zhipu_model.py    // 智谱 GLM-4-Flash 模型
+├── config.py
+├── wsgi.py
+├── README.md
+├── requirements.txt
+└── LICENSE
+```
+
 ## 目录
 
 1. [快速上手指南](#1-快速上手指南)
@@ -33,10 +57,31 @@ pip install -r requirements.txt
 
 # 配置密钥（编辑config.py）
 nano config.py
+```
 
+`config.py` 格式如下：
+
+```python
+class Config:
+    # 智谱AI配置（带权重示例）
+    ZHIPU_CONFIG = {   # 智谱模型配置
+        'api_keys': [  # apiKey 集合
+            {'key': 'your api key', 'weight': 1.0}  # 配置了 weight，影响选择该模型后 apiKey 的选择倾向
+        ],
+        'model_weight': 1, # 模型整体权重，影响模型选择倾向
+        'max_concurrency': 200  # 模型负载参数
+    }
+
+    # 系统配置
+    DEBUG = True
+    FLASK_ENV = 'development'
+    ENABLED_MODELS = ['zhipu']  # 注册的模型
+```
+
+```
 # 启动服务
 python run.py
-~~~
+```
 
 ### 1.2 验证服务
 
