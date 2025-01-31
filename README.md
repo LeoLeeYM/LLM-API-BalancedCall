@@ -1,6 +1,6 @@
 # LLM-API-BalancedCall
 
-[[English Readme]](#1-快速上手指南)
+[[English Readme]](https://github.com/LeoLeeYM/LLM-API-BalancedCall/blob/main/README_EN.md)
 
 基于 Python Flask 的 LLM 模型 API 统一接口均衡调用系统，可快速添加任何 LLM 模型的 API 并设置对应的负载，系统会自动均衡负载，以实现免费 LLM API 的高效应用。
 通过本项目你可以快速完成 LLM 模型 API 的聚合接口，并且模块化的设计允许您快速的添加任意模型 API 并设置其负载和权重。
