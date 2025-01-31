@@ -8,12 +8,15 @@
 2. [添加新模型教程](#2-添加新模型教程)
 3. [高级配置：自定义负载策略](#3-高级配置自定义负载策略)
 4. [生产部署建议](#4-生产部署建议)
+5. [内建API接口文档](#5-内建API接口文档)
 
 ---
 
 ## 1. 快速上手指南
 
 ### 1.1 安装运行
+
+以下是快速安装和运行本项目的步骤：
 
 ```bash
 # 克隆仓库
@@ -33,9 +36,11 @@ nano config.py
 
 # 启动服务
 python run.py
-```
+~~~
 
 ### 1.2 验证服务
+
+在启动服务后，你可以通过以下命令验证服务是否正常运行：
 
 ```bash
 # 测试系统状态
@@ -47,11 +52,13 @@ curl -X POST http://localhost:9000/llm/chat \
   -d '{"messages":[{"role":"user","content":"你好"}]}'
 ```
 
+------
+
 ## 2. 添加新模型教程
 
 ### 2.1 创建模型类
 
-在 `app/utils/models/` 下新建文件（例如 `baidu_model.py`）
+在 `app/utils/models/` 下新建文件（例如 `baidu_model.py`），并实现模型接口：
 
 ```python
 import requests
@@ -145,7 +152,8 @@ class BaiduModel(BaseModel):
 ```
 
 ### 2.2 配置参数
-修改 `config.py`：
+
+修改 `config.py` 以配置 API 密钥和模型参数：
 
 ```python
 class Config:
@@ -173,7 +181,7 @@ class Config:
 #### 配置项说明
 
 | 参数                | 类型  | 必需 | 说明                            |
-| :------------------ | :---- | :--- | :------------------------------ |
+| ------------------- | ----- | ---- | ------------------------------- |
 | api_keys            | list  | 是   | API密钥列表，支持字典格式带权重 |
 | model_weight        | float | 是   | 模型全局权重（>=1提升优先级）   |
 | max_concurrency     | int   | 是   | 单密钥最大并发请求数            |
@@ -184,7 +192,7 @@ class Config:
 
 #### 2.3.1 修改注册文件
 
-编辑 `app/utils/models/__init__.py`：
+编辑 `app/utils/models/__init__.py` 注册模型：
 
 ```python
 from .baidu_model import BaiduModel
@@ -197,13 +205,13 @@ MODEL_CLASSES = {
 
 #### 2.3.2 注册验证
 
+测试注册是否成功：
+
 ```python
 # 测试注册是否成功
 from app.utils.models import MODEL_CLASSES
 print(MODEL_CLASSES['baidu'])  # 应输出 <class 'app.utils.models.baidu_model.BaiduModel'>
 ```
-
-------
 
 ### 2.4 实现API调用
 
@@ -233,17 +241,15 @@ def _parse_response(self, response_data):
         raise ValueError("Invalid response format")
 ```
 
-------
-
 ### 2.5 负载策略配置
 
 #### 2.5.1 策略选择对照表
 
-| 模型特性   | 推荐策略            | 配置示例               |
-| :--------- | :------------------ | :--------------------- |
-| 限制并发数 | ConcurrencyStrategy | `max_concurrency: 100` |
-| 限制QPS    | QPSStrategy         | `max_qps: 5`           |
-| 混合限制   | 自定义策略          | 继承BaseLoadStrategy   |
+| 模型特性   | 推荐策略            | 配置示例             |
+| ---------- | ------------------- | -------------------- |
+| 限制并发数 | ConcurrencyStrategy | max_concurrency: 100 |
+| 限制QPS    | QPSStrategy         | max_qps: 5           |
+| 混合限制   | 自定义策略          | 继承BaseLoadStrategy |
 
 #### 2.5.2 权重配置示例
 
@@ -262,7 +268,7 @@ BAIDU_CONFIG = {'model_weight': 1.5}  # 比默认模型多50%流量
 
 ### 3.1 创建策略类
 
-在 `app/utils/load_strategies.py` 中添加：
+在 `app/utils/load_strategies.py` 中添加自定义负载策略：
 
 ```python
 class ResponseTimeStrategy(BaseLoadStrategy):
@@ -314,7 +320,7 @@ class ResponseTimeStrategy(BaseLoadStrategy):
 
 ### 3.2 在模型中使用
 
-修改模型类：
+修改模型类来使用自定义策略：
 
 ```python
 class CustomModel(BaseModel):
@@ -339,23 +345,15 @@ CUSTOM_CONFIG = {
 }
 ```
 
-### 3.4 策略原理说明
-
-```
-负载因子 = 平均响应时间 × 当前并发数
-选择策略：负载因子最小的实例
-优势：
-1. 自动优先选择响应快的节点
-2. 动态适应性能变化
-3. 防止慢节点拖累整体性能
-```
+------
 
 ## 4. 生产部署建议
 
 ### 4.1 性能优化
 
+使用连接池优化请求性能：
+
 ```python
-# 启用连接池
 from requests.adapters import HTTPAdapter
 
 class CustomModel(BaseModel):
@@ -372,7 +370,7 @@ class CustomModel(BaseModel):
 
 ### 4.2 监控配置
 
-推荐指标：
+推荐使用 Prometheus 进行监控，以下是指标示例：
 
 ```python
 # Prometheus 指标示例
@@ -383,8 +381,6 @@ llm_load_factor{model="custom"} 0.65
 
 ### 4.3 自动扩缩容
 
-示例方案：
-
 ```python
 # 自动调整密钥权重
 def auto_scale_weights():
@@ -394,5 +390,312 @@ def auto_scale_weights():
             # 根据负载动态调整权重
             key_info['weight'] = 1.0 / (load + 0.1)  # 负载越高权重越低
 ```
+
+------
+
+## 5. 内建API接口文档
+
+### 1. 普通对话接口
+
+**端点**: POST /llm/chat
+
+**功能**: 发送普通对话请求，返回完整响应。
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:9000/llm/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+      "messages": [
+          {"role": "user", "content": "你好，请介绍一下你自己"}
+      ]
+  }'
+```
+
+**请求体**:
+
+```json
+{
+    "messages": [
+        {"role": "user", "content": "你好，请介绍一下你自己"}
+    ],
+    "tools": []  // 可选，函数调用工具列表
+}
+```
+
+**响应示例**:
+
+```json
+{
+    "result": "你好！我是一个人工智能助手，专门设计用来回答各种问题和提供帮助。"
+}
+```
+
+### 2. 流式对话接口
+
+**端点**: POST /llm/chat/stream
+
+**功能**: 发送流式对话请求，逐块返回响应。
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:9000/llm/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+      "messages": [
+          {"role": "user", "content": "用Python写一个快速排序算法"}
+      ]
+  }'
+```
+
+**请求体**:
+
+```json
+{
+    "messages": [
+        {"role": "user", "content": "用Python写一个快速排序算法"}
+    ],
+    "tools": []  // 可选，函数调用工具列表
+}
+```
+
+**响应示例**:
+
+```
+快
+速
+排
+序
+算
+法
+...
+```
+
+------
+
+### 3. 系统负载查询接口
+
+**端点**: `GET /llm/system-load`
+
+**功能**: 获取当前系统的负载率（百分比）。
+
+**请求示例**:
+
+```bash
+curl http://localhost:9000/llm/system-load
+```
+
+**响应示例**:
+
+```json
+{
+    "load_percent": 34.56
+}
+```
+
+------
+
+### 4. 系统容量查询接口
+
+**端点**: `GET /llm/system-capacity`
+
+**功能**: 获取系统的理论最大容量和当前负载详情。
+
+**请求示例**:
+
+```bash
+curl http://localhost:9000/llm/system-capacity
+```
+
+**响应示例**:
+
+```json
+{
+    "total_max": {
+        "concurrency": 400,
+        "qps": 10
+    },
+    "details": {
+        "zhipu": {
+            "type": "concurrency",
+            "current": 123,
+            "max": 200,
+            "weight": 1.2,
+            "keys": [
+                {
+                    "key": "key1",
+                    "weight": 2.0,
+                    "current": 80
+                },
+                {
+                    "key": "key2",
+                    "weight": 1.0,
+                    "current": 43
+                }
+            ]
+        },
+        "spark": {
+            "type": "qps",
+            "current": 3,
+            "max": 4,
+            "weight": 1.0,
+            "keys": [
+                {
+                    "key": "keyA",
+                    "weight": 1.0,
+                    "current": 2
+                },
+                {
+                    "key": "keyB",
+                    "weight": 1.0,
+                    "current": 1
+                }
+            ]
+        }
+    }
+}
+```
+
+------
+
+### 5. 模型负载详情接口
+
+默认不启用的接口，该接口会**暴露 APIKey**，如需启用请手动删除 `app/llm/routes.py` 中该接口的注释
+
+**端点**: `GET /llm/model-load/<model_name>`
+
+**功能**: 获取指定模型的负载详情。
+
+**请求示例**:
+
+```bash
+curl http://localhost:9000/llm/model-load/zhipu
+```
+
+**响应示例**:
+
+```json
+{
+    "type": "concurrency",
+    "current": 123,
+    "max": 200,
+    "weight": 1.2,
+    "keys": [
+        {
+            "key": "key1",
+            "weight": 2.0,
+            "current": 80
+        },
+        {
+            "key": "key2",
+            "weight": 1.0,
+            "current": 43
+        }
+    ]
+}
+```
+
+------
+
+### 6. 密钥负载详情接口
+
+**端点**: `GET /llm/key-load/<model_name>/<api_key>`
+
+**功能**: 获取指定模型和密钥的当前负载。
+
+**请求示例**:
+
+```bash
+curl http://localhost:9000/llm/key-load/zhipu/key1
+```
+
+**响应示例**:
+
+```json
+{
+    "key": "key1",
+    "weight": 2.0,
+    "current": 80,
+    "max": 100
+}
+```
+
+------
+
+### 8. 健康检查接口
+
+**端点**: `GET /llm/health`
+
+**功能**: 检查服务是否正常运行。
+
+**请求示例**:
+
+```bash
+curl http://localhost:9000/health
+```
+
+**响应示例**:
+
+```json
+{
+    "status": "ok",
+    "timestamp": "2023-10-15T12:34:56Z"
+}
+```
+
+------
+
+### 9. 模型列表接口
+
+默认不启用的接口，该接口会**暴露 APIKey**，如需启用请手动删除 `app/llm/routes.py` 中该接口的注释
+
+**端点**: `GET /llm/models`
+
+**功能**: 获取当前启用的模型列表。
+
+**请求示例**:
+
+```bash
+curl http://localhost:9000/llm/models
+```
+
+**响应示例**:
+
+```json
+{
+    "models": ["zhipu", "spark", "custom"]
+}
+```
+
+------
+
+### 10. 密钥列表接口
+
+默认不启用的接口，该接口会**暴露 APIKey**，如需启用请手动删除 `app/llm/routes.py` 中该接口的注释
+
+**端点**: `GET /llm/keys/<model_name>`
+
+**功能**: 获取指定模型的 API 密钥列表。
+
+**请求示例**:
+
+```bash
+curl http://localhost:9000/llm/keys/zhipu
+```
+
+**响应示例**:
+
+```json
+{
+    "keys": [
+        {"key": "key1", "weight": 2.0},
+        {"key": "key2", "weight": 1.0}
+    ]
+}
+```
+
+
 
 遇到问题请参考代码注释或提交Issue讨论。
