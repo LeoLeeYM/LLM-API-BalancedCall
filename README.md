@@ -228,8 +228,8 @@ class Config:
 | 参数                | 类型  | 必需 | 说明                            |
 | ------------------- | ----- | ---- | ------------------------------- |
 | api_keys            | list  | 是   | API密钥列表，支持字典格式带权重 |
-| model_weight        | float | 是   | 模型全局权重（>=1提升优先级）   |
-| max_concurrency     | int   | 是   | 单密钥最大并发请求数            |
+| model_weight        | float | 否   | 模型全局权重（>=1提升优先级）   |
+| max_concurrency     | int   | 否   | 单密钥最大并发请求数            |
 | default_temperature | float | 否   | 默认采样温度（0~1）             |
 | max_retries         | int   | 否   | 请求失败重试次数                |
 
@@ -290,11 +290,11 @@ def _parse_response(self, response_data):
 
 #### 2.5.1 策略选择对照表
 
-| 模型特性   | 推荐策略            | 配置示例             |
+| 模型特性   | 策略            | 配置示例             |
 | ---------- | ------------------- | -------------------- |
 | 限制并发数 | ConcurrencyStrategy | max_concurrency: 100 |
 | 限制QPS    | QPSStrategy         | max_qps: 5           |
-| 混合限制   | 自定义策略          | 继承BaseLoadStrategy |
+| 混合限制   | [自定义策略](#3-高级配置自定义负载策略)          | 继承BaseLoadStrategy |
 
 #### 2.5.2 权重配置示例
 
